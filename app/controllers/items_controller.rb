@@ -1,33 +1,40 @@
-# app/controllers/items_controller.rb
 class ItemsController < ApplicationController
-  before_action :set_user
+  rescue_from ActiveRecord::RecordNotFound, with: :render_not_found_response
 
   def index
-    items = @user.items
-    render json: items
+    if params[:user_id]
+      user = User.find(params[:user_id])
+      items = user.items
+    else
+      items = Item.all
+    end
+    render json: items, include: :user
   end
 
   def show
-    item = @user.items.find(params[:id])
-    render json: item
+    item = Item.find(params[:id])
+    render json: item, include: :user
+
   end
+  
+  #def create
+  #  item = Item.create(item_params)
+  # render json: item, status: :created
+  #end
 
   def create
-    item = @user.items.create(item_params)
-    if item.valid?
-      render json: item, status: :created
-    else
-      render json: { errors: item.errors.full_messages }, status: :unprocessable_entity
-    end
+    item = Item.create(item_params)
+    render json: item, status: :created
   end
 
   private
 
-  def set_user
-    @user = User.find(params[:user_id])
+  def render_not_found_response(exception)
+    render json: { error: exception.message }, status: :not_found
   end
 
   def item_params
-    params.permit(:name, :description, :price)
+    params.permit(:name, :description, :price, :user_id)
   end
+
 end
